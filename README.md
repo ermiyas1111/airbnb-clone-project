@@ -31,3 +31,52 @@ In a project of this scale, team members assume specialized roles:
 - **GitHub Actions:** A CI/CD (Continuous Integration/Continuous Deployment) tool integrated into GitHub. It automates the process of testing code and deploying it to a live server whenever changes are pushed to the main branch.
 - **Nginx:** A web server that will act as a reverse proxy for our Django application, handling client requests and serving static files efficiently.
 - **Gunicorn:** A Python WSGI HTTP Server that will serve our Django application in production.
+- ## Database Design
+
+The database will consist of the following key entities and relationships:
+
+1.  **User**
+    - `id` (Primary Key), `username`, `email`, `password_hash`, `first_name`, `last_name`, `profile_picture_url`, `is_host`
+    - *Relationships:* A User can have many Properties (One-to-Many). A User can have many Bookings (One-to-Many). A User can have many Reviews (One-to-Many).
+
+2.  **Property**
+    - `id` (Primary Key), `title`, `description`, `price_per_night`, `location`, `host_id` (Foreign Key to User)
+    - *Relationships:* A Property belongs to one User (the host). A Property can have many Bookings (One-to-Many). A Property can have many Reviews (One-to-Many).
+
+3.  **Booking**
+    - `id` (Primary Key), `property_id` (Foreign Key to Property), `guest_id` (Foreign Key to User), `check_in_date`, `check_out_date`, `total_price`, `status` (e.g., pending, confirmed, cancelled)
+    - *Relationships:* A Booking belongs to one Property. A Booking belongs to one User (the guest).
+
+4.  **Review**
+    - `id` (Primary Key), `booking_id` (Foreign Key to Booking), `property_id` (Foreign Key to Property), `guest_id` (Foreign Key to User), `rating`, `comment`
+    - *Relationships:* A Review belongs to one Booking. A Review belongs to one Property. A Review belongs to one User.
+
+5.  **Payment**
+    - `id` (Primary Key), `booking_id` (Foreign Key to Booking), `amount`, `payment_method`, `status` (e.g., pending, completed, failed), `transaction_id`
+    - *Relationships:* A Payment transaction belongs to one Booking.
+    - ## Feature Breakdown
+
+- **User Authentication & Authorization:** Allows users to securely sign up, log in, and log out. This is the foundation for personalizing the user experience and protecting sensitive actions and data.
+- **Property Management:** Enables hosts to create, read, update, and delete property listings. This feature is core to populating the platform with bookable spaces.
+- **Booking System:** Allows guests to search for properties, check availability, and make reservations. This handles the core business logic of calculating stay duration, total cost, and managing availability conflicts.
+- **Review & Rating System:** Allows guests to leave reviews and ratings for properties they've booked. This builds trust and community on the platform by providing social proof for listings.
+- **Payment Processing Integration:** A secure system to handle financial transactions for bookings. This is critical for the platform's commercial viability and requires strict security measures.
+- ## API Security
+
+Implementing robust security measures is non-negotiable for a platform handling personal and financial data.
+
+- **Authentication (JWT Tokens):** JSON Web Tokens will be used to verify a user's identity after login. This is crucial to ensure that only logged-in users can perform actions like making bookings or creating listings.
+- **Authorization (Permission Classes):** Django REST Framework's permission classes will ensure users can only edit or delete their own resources (e.g., a user can only update their own property listing, not others'). This protects data integrity and user privacy.
+- **Data Encryption (HTTPS & Database):** All data in transit will be encrypted using HTTPS/TLS. Sensitive data like passwords will be hashed (using bcrypt/Argon2) before being stored in the database, protecting it even in the event of a breach.
+- **Rate Limiting:** APIs, especially for login and signup, will have rate limiting to prevent abuse and Denial-of-Service (DoS) attacks by blocking excessive requests from a single IP address.
+- **Input Validation & Sanitization:** All user input will be rigorously validated on the backend to prevent common vulnerabilities like SQL Injection and Cross-Site Scripting (XSS), which are critical for maintaining database and user security.
+- ## CI/CD Pipeline
+
+A CI/CD (Continuous Integration/Continuous Deployment) pipeline automates the steps from code commit to deployment, reducing human error and ensuring faster, more reliable releases.
+
+- **What it is:** CI/CD is an automated process. **CI (Continuous Integration)** automatically builds and tests code every time a developer pushes changes. **CD (Continuous Deployment)** automatically deploys that tested code to a live server.
+- **Why it's important:** It ensures that code in the main branch is always deployable. It catches bugs early through automated testing, accelerates the release process, and allows for frequent, small updates.
+- **Tools for this project:** We will use **GitHub Actions** to define our CI/CD workflow. The pipeline will:
+    1.  **Lint & Test:** Run automatically on every pull request to the main branch to check code style and run unit tests.
+    2.  **Build & Containerize:** If tests pass, the workflow will build the Docker image for the application.
+    3.  **Deploy:** The workflow will then deploy the updated Docker container to our production server (e.g., AWS EC2, DigitalOcean Droplet).
